@@ -9,10 +9,13 @@ See proposal.md - Why. This is a greenfield service: a FastAPI process handles i
 - Keep the ingestion path (`POST` handler) fast and free of processing logic — it only validates and enqueues.
 - Make retry/backoff and idempotency composable: a retried attempt goes through the same dedup check as a fresh delivery.
 
+- Give an operator basic visibility into event status and attempt counts (via `GET /events` and a static page) without building a full admin UI.
+
 **Non-Goals:**
 - Exactly-once delivery guarantees at the transport level (webhook providers are at-least-once; we only guarantee at-most-once *processing*, not at-most-once *receipt*).
 - Ordering guarantees across different event IDs.
 - Multi-tenant provider abstraction beyond extracting an ID field/header per request — no per-provider plugin system in this change.
+- Real business processing logic: this change ships a stub (see below); a full-featured admin dashboard, auth-gated UI, or real-time (websocket/polling) updates for the events page — a static page that fetches once on load is sufficient for this change.
 
 ## Decisions
 
@@ -41,9 +44,26 @@ A worker claims the event ID (via `SET NX`) *before* executing processing logic,
 
 - **Why**: Claiming before executing (rather than checking-then-executing non-atomically) is what makes the concurrent-worker guarantee hold; checking "has this been done?" as a separate read followed by a separate write would leave a race window between the two.
 
+### Processing logic: stub with a deliberate-failure trigger
+The processing logic invoked by the worker (Decision above) is, for this change, a stub: it writes a record of the event (event ID, outcome) to the event-record store and returns success — unless the event payload contains `"fail": true`, in which case it raises a retryable error instead of writing a success record.
+
+- **Why**: A payload-triggered failure lets retry/backoff and idempotency behavior be exercised deterministically end-to-end (including over the real HTTP path, for manual and e2e testing) without wiring real business logic in this change. It replaces "process the event" with the minimum behavior needed to prove the surrounding guarantees work.
+- **Alternative considered**: Only exercising failure paths via mocking/patching in unit tests. Rejected because it would leave no way to trigger a real retry/idempotency cycle through the actual API for manual verification or e2e tests (see tasks.md 5.1/5.2 and 6.4).
+
+### Event-record store for status/attempts (`event-visibility`)
+Reuse Redis for the event-record store: one hash per event ID (e.g. `event:{event_id}` with fields `status`, `attempts`), written by the worker at each transition (claimed, succeeded, failed/rescheduled, dead-lettered) and by the ingestion handler on initial enqueue (`status=pending`, `attempts=0`). `GET /events` reads this store.
+
+- **Why**: Keeps infrastructure to the one moving part already chosen (Redis) instead of adding a second database just for status reporting; the fields needed (`status`, `attempts`) are exactly what the worker already tracks for retry/backoff (Decision above).
+- **Alternative considered**: A separate SQL table for event records. Rejected for the same reason the idempotency store stayed on Redis rather than SQL — one less moving part, revisit if reporting needs grow beyond a simple list.
+
+### Local dev Redis: use the existing local instance directly
+Redis is already installed and running locally (`localhost:6379`) with AOF persistence enabled. The app connects to it directly via configuration; this change does not add docker-compose or any Redis install/provisioning step.
+
+- **Why**: The infrastructure precondition this design already required (Redis with AOF, see Risks below) is met locally; adding docker-compose here would be redundant setup work outside this change's scope.
+
 ## Risks / Trade-offs
 
-- **[Risk] Redis data loss on restart** → could cause a completed event's `done` marker to be lost, allowing reprocessing on redelivery. **Mitigation**: require Redis persistence (AOF, `appendfsync everysec` or stricter) in deployment; document this as an operational requirement, not just a code concern.
+- **[Risk] Redis data loss on restart** → could cause a completed event's `done` marker to be lost, allowing reprocessing on redelivery. **Mitigation**: require Redis persistence (AOF, `appendfsync everysec` or stricter) in deployment; local dev already has AOF enabled (verified in task 1.3), but this must also be verified in any other environment this is deployed to.
 - **[Risk] Claim TTL shorter than actual processing time** → a slow processing attempt could have its claim expire while still running, letting a second worker start processing concurrently. **Mitigation**: set claim TTL well above p99 processing latency, and treat this as a tunable that should be revisited if processing logic changes.
 - **[Risk] Provider sends an event ID that is reused for logically different events** → would cause the system to incorrectly treat a new event as a duplicate. **Mitigation**: out of our control; document that this system trusts the provider's event ID to be unique per logical event, per the "Non-Goals" above.
 - **[Trade-off] No payload-hash fallback for providers without an event ID** → those integrations are rejected at ingestion (`400`) instead of accepted with weaker dedup guarantees. This is intentional: silently accepting undeduplicable events would violate the core idempotency requirement.

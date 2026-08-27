@@ -26,6 +26,17 @@ When an event's processing attempt fails with a retryable error, the system SHAL
 - **WHEN** an event has failed processing on its configured maximum number of attempts
 - **THEN** the system stops retrying that event and marks it as permanently failed (dead-lettered) instead of rescheduling it again
 
+### Requirement: Processing logic is a stub that records outcome and can fail on demand
+For this change, the system's processing logic SHALL be a stub: on execution it SHALL write a record of the event (at minimum its event ID and outcome) to the event-record store, and it SHALL deliberately raise a retryable failure — instead of writing a success record — when the event's payload contains a `"fail": true` field, so that retry/backoff and idempotency behavior can be exercised on demand.
+
+#### Scenario: Stub processing succeeds and records the event
+- **WHEN** processing logic executes for an event whose payload does not contain `"fail": true`
+- **THEN** the system writes a record marking that event as successfully processed and does not raise an error
+
+#### Scenario: Stub processing fails deliberately on request
+- **WHEN** processing logic executes for an event whose payload contains `"fail": true`
+- **THEN** the system raises a retryable failure for that attempt, does not write a successful-completion record, and the existing retry/backoff behavior applies
+
 ### Requirement: A single failing event does not block other events
 The system SHALL continue processing other queued events while a given event is waiting for its next retry attempt or has been dead-lettered.
 

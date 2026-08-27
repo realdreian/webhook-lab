@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Initialize Python project structure (FastAPI app package, worker entrypoint, `pyproject.toml`/`requirements.txt`) and verify `python -m app` (or equivalent) imports cleanly
 - [ ] 1.2 Add FastAPI, Redis client (e.g. `redis-py` with async support), and test dependencies (pytest, pytest-asyncio) and verify `pip install` / dependency resolution succeeds
-- [ ] 1.3 Add local dev infra (Redis via docker-compose or equivalent) and verify the app can connect to Redis with a health-check script
+- [ ] 1.3 Verify connectivity to the already-running local Redis instance (`localhost:6379`) with a health-check script, and confirm AOF persistence is enabled (e.g. `redis-cli CONFIG GET appendonly` returns `yes`) — no docker-compose and no Redis install needed, Redis is already installed and running locally
 
 ## 2. Webhook ingestion (specs/webhook-ingestion)
 
@@ -26,9 +26,17 @@
 - [ ] 4.3 Implement max-attempts enforcement that moves an event to a dead-letter list instead of rescheduling once the configured max is reached, and verify a test covers "Max attempts exhausted stops retries"
 - [ ] 4.4 On processing failure, release the idempotency claim (delete the claim key) before rescheduling, and verify a test confirms a retried attempt can re-claim the event ID
 - [ ] 4.5 Verify a test confirms one event's backoff wait does not block other queued events from being processed (spec: "Backlogged retry does not stall the queue")
+- [ ] 4.6 Implement the stub processing logic: write a success record to the event-record store on normal execution, and raise a retryable failure without writing a success record when the payload contains `"fail": true`, and verify unit tests cover both branches (spec: "Stub processing succeeds and records the event" / "Stub processing fails deliberately on request")
 
 ## 5. End-to-end verification
 
 - [ ] 5.1 Write an end-to-end test: send the same event ID twice concurrently, and verify processing logic executes exactly once
 - [ ] 5.2 Write an end-to-end test: simulate a processing failure followed by a successful retry, and verify the event is marked done exactly once and not reprocessed after success
 - [ ] 5.3 Document configuration values (claim TTL, done-record TTL, base/max backoff delay, max attempts) and Redis persistence requirement (AOF) in a README or equivalent, per design.md Risks
+
+## 6. Front-end: event visibility (specs/event-visibility)
+
+- [ ] 6.1 Implement the event-record store updates (`status`, `attempts` per event ID in Redis) at ingestion (`status=pending`, `attempts=0`) and at each worker transition (claimed/processing, succeeded, failed/retrying, dead-lettered), and verify a test asserts the record reflects each transition
+- [ ] 6.2 Implement `GET /events` returning the list of tracked events with `event_id`, `status`, and `attempts`, and verify a test covers the response shape (spec: "Listing events returns status and attempts")
+- [ ] 6.3 Build a static HTML page (e.g. `static/index.html`) that fetches `GET /events` on load and renders each event's ID, status, and attempt count, and verify it loads and displays event data when served (spec: "Page displays the current event list")
+- [ ] 6.4 Write an end-to-end check: send a webhook event with `"fail": true` to trigger a retry, then confirm `GET /events` and the static page reflect the increasing attempt count and updated status

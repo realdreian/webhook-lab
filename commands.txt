@@ -1,0 +1,4 @@
+Os comandos são diferentes em cada ferramenta. Anota:
+
+Claude Code → /opsx:propose (dois pontos)
+agy → /opsx-propose (hífen)

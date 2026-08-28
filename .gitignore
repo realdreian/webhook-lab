@@ -7,3 +7,4 @@ dist/
 build/
 webhook_receiver.egg-info/
 spec_review.md
+.playwright-cli/

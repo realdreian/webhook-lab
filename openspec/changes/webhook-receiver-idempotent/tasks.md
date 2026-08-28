@@ -6,10 +6,10 @@
 
 ## 2. Webhook ingestion (specs/webhook-ingestion)
 
-- [ ] 2.1 Implement `POST /webhooks/{provider}` handler that parses and validates the JSON body, and verify a unit test covers the malformed-body → `400` scenario
-- [ ] 2.2 Implement event ID extraction (payload field and/or header, per provider config) and verify a unit test covers both the "ID present" and "ID missing → 400" scenarios
-- [ ] 2.3 Implement enqueue-and-acknowledge flow (write event + event ID to the Redis queue, respond `2xx` before processing) and verify an integration test asserts the response returns before the event is processed
-- [ ] 2.4 Verify a load/backlog test confirms ingestion still accepts and acks new events while the queue has a backlog (spec: "Queue accepts event under processing backlog")
+- [x] 2.1 Implement `POST /webhooks/{provider}` handler that parses and validates the JSON body, and verify a unit test covers the malformed-body → `400` scenario
+- [x] 2.2 Implement event ID extraction (payload field and/or header, per provider config) and verify a unit test covers both the "ID present" and "ID missing → 400" scenarios
+- [x] 2.3 Implement enqueue-and-acknowledge flow (write event + event ID to the Redis queue, respond `2xx` before processing) and verify an integration test asserts the response returns before the event is processed
+- [x] 2.4 Verify a load/backlog test confirms ingestion still accepts and acks new events while the queue has a backlog (spec: "Queue accepts event under processing backlog")
 
 ## 3. Idempotency store (specs/event-idempotency)
 

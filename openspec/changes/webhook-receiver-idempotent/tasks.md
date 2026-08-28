@@ -13,11 +13,11 @@
 
 ## 3. Idempotency store (specs/event-idempotency)
 
-- [ ] 3.1 Implement claim/release helper using Redis `SET NX EX` for claiming an event ID and `SET EX` for marking it done, and verify unit tests cover claim-succeeds, claim-already-held, and mark-done transitions
-- [ ] 3.2 Wire claim TTL and done-record TTL to configuration values and verify they are read from environment/config, not hardcoded
-- [ ] 3.3 Write a concurrency test that spins up two simultaneous claim attempts for the same event ID and verifies exactly one succeeds (spec: "Two workers race on the same event ID")
-- [ ] 3.4 Write a test that simulates a completed event being redelivered and verifies it is recognized as done and skipped (spec: "Duplicate delivery of an already-processed event is a no-op")
-- [ ] 3.5 Write a test that simulates a crashed claim (TTL expiry without completion) and verifies another worker can reclaim it (spec: "Worker crashes mid-processing")
+- [x] 3.1 Implement claim/release helper using Redis `SET NX EX` for claiming an event ID and `SET EX` for marking it done, and verify unit tests cover claim-succeeds, claim-already-held, and mark-done transitions
+- [x] 3.2 Wire claim TTL and done-record TTL to configuration values and verify they are read from environment/config, not hardcoded
+- [x] 3.3 Write a concurrency test that spins up two simultaneous claim attempts for the same event ID and verifies exactly one succeeds (spec: "Two workers race on the same event ID")
+- [x] 3.4 Write a test that simulates a completed event being redelivered and verifies it is recognized as done and skipped (spec: "Duplicate delivery of an already-processed event is a no-op")
+- [x] 3.5 Write a test that simulates a crashed claim (TTL expiry without completion) and verifies another worker can reclaim it (spec: "Worker crashes mid-processing")
 
 ## 4. Event processing and retry/backoff (specs/event-processing)
 

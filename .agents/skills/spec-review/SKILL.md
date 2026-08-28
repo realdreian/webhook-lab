@@ -33,3 +33,6 @@ Para cada achado:
 - **Como verificar** que foi corrigido
 
 Não corrija nada. Só aponte.
+
+Após correções, rode a revisão novamente. Correção introduz desvio
+novo, e a segunda passada é onde ele aparece.

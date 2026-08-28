@@ -34,5 +34,11 @@ Para cada achado:
 
 Não corrija nada. Só aponte.
 
-Após correções, rode a revisão novamente. Correção introduz desvio
-novo, e a segunda passada é onde ele aparece.
+Após correções, rode a revisão uma segunda vez — correção introduz
+desvio novo. Classifique cada achado como divergência de spec ou
+higiene.
+
+Encerre quando a passada não trouxer nenhuma divergência de spec.
+Achado de higiene remanescente não impede o encerramento. Máximo de
+três passadas: se ainda aparecer divergência de spec na terceira, o
+problema está na spec, não no código — pare e relate isso.

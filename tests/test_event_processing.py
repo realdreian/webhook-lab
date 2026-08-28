@@ -101,6 +101,72 @@ async def test_exponential_backoff_delay_sequence(redis):
     await redis.zremrangebyscore(DELAYED_QUEUE_KEY, "-inf", "+inf")
 
 @pytest.mark.asyncio
+async def test_exponential_backoff_delay_increases_across_attempts(redis):
+    # 4.2: "Repeated failures increase the delay" - the delay for attempt n+1
+    # must be strictly larger than the delay for attempt n, matching base_delay * 2^attempt.
+    event_id = gen_event_id()
+
+    async def fail_and_get_delay(evt_dict):
+        before = time.time()
+        await handle_event(redis, json.dumps(evt_dict))
+        items = await redis.zrange(DELAYED_QUEUE_KEY, 0, -1, withscores=True)
+        match = None
+        for member, score in items:
+            if json.loads(member)["event_id"] == event_id:
+                match = (member, score)
+                break
+        assert match is not None
+        member, score = match
+        await redis.zrem(DELAYED_QUEUE_KEY, member)
+        return score - before, json.loads(member)
+
+    # First failure: attempt 0 -> 1
+    delay1, next_event = await fail_and_get_delay(
+        make_event(event_id, attempt=0, payload={"fail": True})
+    )
+    expected1 = min(BASE_DELAY * (2 ** 1), MAX_DELAY)
+    assert delay1 == pytest.approx(expected1, abs=0.5)
+
+    # Second failure: attempt 1 -> 2, replaying the exact event the worker re-enqueued
+    delay2, _ = await fail_and_get_delay(next_event)
+    expected2 = min(BASE_DELAY * (2 ** 2), MAX_DELAY)
+    assert delay2 == pytest.approx(expected2, abs=0.5)
+
+    assert delay2 > delay1
+
+@pytest.mark.asyncio
+async def test_exponential_backoff_delay_capped_at_max_delay(redis, monkeypatch):
+    # 4.2: once base_delay * 2^attempt exceeds max_delay, the scheduled delay must be
+    # clamped to max_delay rather than growing unbounded.
+    import worker.worker_loop as worker_loop_module
+    monkeypatch.setattr(worker_loop_module, "BASE_DELAY", 1)
+    monkeypatch.setattr(worker_loop_module, "MAX_DELAY", 5)
+    monkeypatch.setattr(worker_loop_module, "MAX_ATTEMPTS", 1000)
+
+    event_id = gen_event_id()
+    # attempt=10 -> current_attempt=11 -> 1 * 2**11 is far beyond the patched cap of 5
+    event = make_event(event_id, attempt=10, payload={"fail": True})
+
+    before = time.time()
+    await handle_event(redis, json.dumps(event))
+
+    items = await redis.zrange(DELAYED_QUEUE_KEY, 0, -1, withscores=True)
+    match = None
+    for member, score in items:
+        if json.loads(member)["event_id"] == event_id:
+            match = (member, score)
+            break
+    assert match is not None
+    member, score = match
+    delay = score - before
+    assert delay == pytest.approx(5, abs=0.5)
+
+    record = await redis.hgetall(f"{EVENT_STORE_PREFIX}{event_id}")
+    assert record.get("status") == "failed/retrying"
+
+    await redis.zrem(DELAYED_QUEUE_KEY, member)
+
+@pytest.mark.asyncio
 async def test_max_attempts_dead_letter(redis):
     # 4.3: Max attempts exhausted stops retries, goes to DLQ
     event_id = gen_event_id()

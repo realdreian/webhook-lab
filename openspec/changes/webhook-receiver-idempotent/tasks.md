@@ -1,8 +1,8 @@
 ## 1. Project setup
 
 - [x] 1.1 Initialize Python project structure (FastAPI app package, worker entrypoint, `pyproject.toml`/`requirements.txt`) and verify `python -m app` (or equivalent) imports cleanly
-- [ ] 1.2 Add FastAPI, Redis client (e.g. `redis-py` with async support), and test dependencies (pytest, pytest-asyncio) and verify `pip install` / dependency resolution succeeds
-- [ ] 1.3 Verify connectivity to the already-running local Redis instance (`localhost:6379`) with a health-check script, and confirm AOF persistence is enabled (e.g. `redis-cli CONFIG GET appendonly` returns `yes`) — no docker-compose and no Redis install needed, Redis is already installed and running locally
+- [x] 1.2 Add FastAPI, Redis client (e.g. `redis-py` with async support), and test dependencies (pytest, pytest-asyncio) and verify `pip install` / dependency resolution succeeds
+- [x] 1.3 Verify connectivity to the already-running local Redis instance (`localhost:6379`) with a health-check script, and confirm AOF persistence is enabled (e.g. `redis-cli CONFIG GET appendonly` returns `yes`) — no docker-compose and no Redis install needed, Redis is already installed and running locally
 
 ## 2. Webhook ingestion (specs/webhook-ingestion)
 

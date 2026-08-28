@@ -21,12 +21,12 @@
 
 ## 4. Event processing and retry/backoff (specs/event-processing)
 
-- [ ] 4.1 Implement the worker loop that dequeues an event, attempts the idempotency claim from Task 3.1, and only executes processing logic if the claim succeeds
-- [ ] 4.2 Implement per-event `attempt` counter and exponential backoff scheduling (`base_delay * 2^attempt`, capped at `max_delay`) on processing failure, and verify unit tests assert the delay sequence matches the spec's "delay increases with attempt count" scenario
-- [ ] 4.3 Implement max-attempts enforcement that moves an event to a dead-letter list instead of rescheduling once the configured max is reached, and verify a test covers "Max attempts exhausted stops retries"
-- [ ] 4.4 On processing failure, release the idempotency claim (delete the claim key) before rescheduling, and verify a test confirms a retried attempt can re-claim the event ID
-- [ ] 4.5 Verify a test confirms one event's backoff wait does not block other queued events from being processed (spec: "Backlogged retry does not stall the queue")
-- [ ] 4.6 Implement the stub processing logic: write a success record to the event-record store on normal execution, and raise a retryable failure without writing a success record when the payload contains `"fail": true`, and verify unit tests cover both branches (spec: "Stub processing succeeds and records the event" / "Stub processing fails deliberately on request")
+- [x] 4.1 Implement the worker loop that dequeues an event, attempts the idempotency claim from Task 3.1, and only executes processing logic if the claim succeeds
+- [x] 4.2 Implement per-event `attempt` counter and exponential backoff scheduling (`base_delay * 2^attempt`, capped at `max_delay`) on processing failure, and verify unit tests assert the delay sequence matches the spec's "delay increases with attempt count" scenario
+- [x] 4.3 Implement max-attempts enforcement that moves an event to a dead-letter list instead of rescheduling once the configured max is reached, and verify a test covers "Max attempts exhausted stops retries"
+- [x] 4.4 On processing failure, release the idempotency claim (delete the claim key) before rescheduling, and verify a test confirms a retried attempt can re-claim the event ID
+- [x] 4.5 Verify a test confirms one event's backoff wait does not block other queued events from being processed (spec: "Backlogged retry does not stall the queue")
+- [x] 4.6 Implement the stub processing logic: write a success record to the event-record store on normal execution, and raise a retryable failure without writing a success record when the payload contains `"fail": true`, and verify unit tests cover both branches (spec: "Stub processing succeeds and records the event" / "Stub processing fails deliberately on request")
 
 ## 5. End-to-end verification
 

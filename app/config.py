@@ -11,3 +11,9 @@ IDEMPOTENCY_PREFIX = os.getenv("IDEMPOTENCY_PREFIX", "idempotency:")
 
 CLAIM_TTL = int(os.getenv("CLAIM_TTL", "300"))  # 5 minutes default
 DONE_TTL = int(os.getenv("DONE_TTL", "604800")) # 7 days default
+
+DELAYED_QUEUE_KEY = os.getenv("DELAYED_QUEUE_KEY", "queue:events:delayed")
+DLQ_KEY = os.getenv("DLQ_KEY", "queue:events:dlq")
+BASE_DELAY = int(os.getenv("BASE_DELAY", "1"))
+MAX_DELAY = int(os.getenv("MAX_DELAY", "60"))
+MAX_ATTEMPTS = int(os.getenv("MAX_ATTEMPTS", "5"))

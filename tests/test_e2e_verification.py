@@ -1,6 +1,5 @@
 import json
 import asyncio
-import time
 import uuid
 import pytest
 import pytest_asyncio

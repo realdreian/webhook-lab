@@ -1,11 +1,9 @@
 import json
 import time
 from contextlib import asynccontextmanager
-from typing import Any
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-import uvicorn
 
 from app.config import QUEUE_KEY, EVENT_STORE_PREFIX
 from app.extractors import extract_event_id

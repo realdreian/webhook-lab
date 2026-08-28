@@ -25,7 +25,7 @@ class ProcessingFailure(Exception):
 
 async def process_event_stub(event: dict, redis: Redis):
     """
-    Task 4.6: Stub processing logic.
+    Stub processing logic.
     Raises ProcessingFailure if payload contains "fail": true.
     Otherwise, writes success record.
     """
@@ -33,8 +33,7 @@ async def process_event_stub(event: dict, redis: Redis):
     if isinstance(payload, dict) and payload.get("fail") is True:
         raise ProcessingFailure("Deliberate failure triggered by payload")
     
-    # Write success record to event-record store (Task 4.6 part)
-    # We'll just set it to succeeded. We'll do full status tracking later.
+    # Write success record to event-record store
     event_id = event["event_id"]
     await redis.hset(
         f"{EVENT_STORE_PREFIX}{event_id}",
@@ -46,14 +45,14 @@ async def handle_event(redis: Redis, event_str: str):
     event_id = event["event_id"]
     
     try:
-        # Task 4.1: Attempt claim
+        # Attempt claim
         await claim_event(redis, event_id)
     except (ClaimAlreadyHeldError, EventAlreadyDoneError):
         # Already processed or being processed by another worker
         return
 
     try:
-        # Task 6.1: increment attempts and set status to processing
+        # Increment attempts and set status to processing
         current_attempt = event.get("attempt", 0) + 1
         event["attempt"] = current_attempt
         
@@ -73,10 +72,10 @@ async def handle_event(redis: Redis, event_str: str):
         )
         
     except Exception as e:
-        # Task 4.4: Release claim on failure
+        # Release claim on failure
         await release_claim(redis, event_id)
         
-        # Task 4.3: Max attempts enforcement
+        # Max attempts enforcement
         attempt = event["attempt"]
         if attempt >= MAX_ATTEMPTS:
             await redis.rpush(DLQ_KEY, json.dumps(event))
@@ -85,7 +84,7 @@ async def handle_event(redis: Redis, event_str: str):
                 mapping={"status": "dead-lettered", "attempts": str(attempt)}
             )
         else:
-            # Task 4.2: Exponential backoff
+            # Exponential backoff
             delay = min(BASE_DELAY * (2 ** (attempt - 1)), MAX_DELAY)
             ready_at = time.time() + delay
             await redis.zadd(DELAYED_QUEUE_KEY, {json.dumps(event): ready_at})
@@ -104,8 +103,8 @@ async def check_delayed_queue(redis: Redis):
     if ready_items:
         # Move them to the main queue
         for item in ready_items:
-            await redis.rpush(QUEUE_KEY, item)
-            await redis.zrem(DELAYED_QUEUE_KEY, item)
+            if await redis.zrem(DELAYED_QUEUE_KEY, item):
+                await redis.rpush(QUEUE_KEY, item)
 
 async def worker_loop(redis: Redis, once: bool = False):
     """

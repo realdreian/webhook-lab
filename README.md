@@ -47,6 +47,13 @@ To run the complete suite of unit, integration, and end-to-end tests:
 pytest -v
 ```
 
+### 5. Test Isolation Strategy
+
+To prevent test runs from interfering with each other or with active development databases, the test suite implements the following isolation strategies:
+- **Randomized Key Names**: Test events use dynamically generated UUIDs or unique timestamp-based identifiers to prevent key collisions in the shared Redis database.
+- **Explicit setup/teardown cleaning**: Pytest fixtures and individual tests explicitly clear the queue keys (`queue:events`, `queue:events:delayed`, `queue:events:dlq`) and delete generated test-event prefix keys before and after execution to ensure a clean state.
+
+
 ## Architectural Decisions
 
 The idempotency key is based on the provider-supplied ID (payload field or header) rather than a hash of the payload, because provider-supplied IDs are stable across redeliveries of the same logical event even if the body serialization or metadata change slightly. This prevents accidental deduplication failures if the provider alters formatting on redelivery, or if two genuinely different events with identical bodies are incorrectly treated as duplicates.

@@ -1,4 +1,3 @@
-from typing import Optional
 from redis.asyncio import Redis
 from app.config import IDEMPOTENCY_PREFIX, CLAIM_TTL, DONE_TTL
 

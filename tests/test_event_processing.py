@@ -16,7 +16,7 @@ from app.config import (
     MAX_DELAY,
     MAX_ATTEMPTS
 )
-from app.idempotency import claim_event, mark_event_done, release_claim
+from app.idempotency import claim_event
 
 @pytest_asyncio.fixture
 async def redis():

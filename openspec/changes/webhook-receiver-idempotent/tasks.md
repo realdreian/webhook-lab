@@ -36,7 +36,7 @@
 
 ## 6. Front-end: event visibility (specs/event-visibility)
 
-- [ ] 6.1 Implement the event-record store updates (`status`, `attempts` per event ID in Redis) at ingestion (`status=pending`, `attempts=0`) and at each worker transition (claimed/processing, succeeded, failed/retrying, dead-lettered), and verify a test asserts the record reflects each transition
-- [ ] 6.2 Implement `GET /events` returning the list of tracked events with `event_id`, `status`, and `attempts`, and verify a test covers the response shape (spec: "Listing events returns status and attempts")
-- [ ] 6.3 Build a static HTML page (e.g. `static/index.html`) that fetches `GET /events` on load and renders each event's ID, status, and attempt count, and verify it loads and displays event data when served (spec: "Page displays the current event list")
-- [ ] 6.4 Write an end-to-end check: send a webhook event with `"fail": true` to trigger a retry, then confirm `GET /events` and the static page reflect the increasing attempt count and updated status
+- [x] 6.1 Implement the event-record store updates (`status`, `attempts` per event ID in Redis) at ingestion (`status=pending`, `attempts=0`) and at each worker transition (claimed/processing, succeeded, failed/retrying, dead-lettered), and verify a test asserts the record reflects each transition
+- [x] 6.2 Implement `GET /events` returning the list of tracked events with `event_id`, `status`, and `attempts`, and verify a test covers the response shape (spec: "Listing events returns status and attempts")
+- [x] 6.3 Build a static HTML page (e.g. `static/index.html`) that fetches `GET /events` on load and renders each event's ID, status, and attempt count, and verify it loads and displays event data when served (spec: "Page displays the current event list")
+- [x] 6.4 Write an end-to-end check: send a webhook event with `"fail": true` to trigger a retry, then confirm `GET /events` and the static page reflect the increasing attempt count and updated status

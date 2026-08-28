@@ -3,7 +3,8 @@ import time
 from contextlib import asynccontextmanager
 from typing import Any
 from fastapi import FastAPI, Request, Response, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from app.config import QUEUE_KEY, EVENT_STORE_PREFIX
@@ -19,6 +20,12 @@ async def lifespan(app: FastAPI):
     await close_redis()
 
 app = FastAPI(title="Webhook Receiver", lifespan=lifespan)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+async def get_index():
+    return FileResponse("static/index.html")
 
 @app.post("/webhooks/{provider}", status_code=status.HTTP_202_ACCEPTED)
 async def receive_webhook(provider: str, request: Request) -> Response:
@@ -71,3 +78,26 @@ async def receive_webhook(provider: str, request: Request) -> Response:
         status_code=status.HTTP_202_ACCEPTED,
         content={"status": "accepted", "event_id": event_id}
     )
+
+@app.get("/events")
+async def list_events():
+    redis = await get_redis()
+    cursor = 0
+    keys = []
+    while True:
+        cursor, chunk = await redis.scan(cursor, match=f"{EVENT_STORE_PREFIX}*", count=100)
+        keys.extend(chunk)
+        if cursor == 0:
+            break
+            
+    events = []
+    for key in keys:
+        event_id = key.split(EVENT_STORE_PREFIX, 1)[1]
+        record = await redis.hgetall(key)
+        events.append({
+            "event_id": event_id,
+            "status": record.get("status"),
+            "attempts": int(record.get("attempts", 0))
+        })
+        
+    return events

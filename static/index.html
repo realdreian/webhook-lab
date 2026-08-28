@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Event List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f6f9;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            color: #555;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f1f3f5;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        .status-pending { background-color: #ffeeba; color: #856404; }
+        .status-processing { background-color: #b8daff; color: #004085; }
+        .status-succeeded { background-color: #c3e6cb; color: #155724; }
+        .status-failed-retrying { background-color: #f8d7da; color: #721c24; }
+        .status-dead-lettered { background-color: #e2e3e5; color: #383d41; }
+        
+        .refresh-btn {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .refresh-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Webhook Event Status Tracker</h1>
+    <button class="refresh-btn" onclick="fetchEvents()">Refresh List</button>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Event ID</th>
+                <th>Status</th>
+                <th>Attempt Count</th>
+            </tr>
+        </thead>
+        <tbody id="events-table-body">
+            <tr>
+                <td colspan="3" style="text-align: center;">Loading events...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        async function fetchEvents() {
+            try {
+                const response = await fetch('/events');
+                const events = await response.json();
+                const tbody = document.getElementById('events-table-body');
+                tbody.innerHTML = '';
+                
+                if (events.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No events tracked yet.</td></tr>';
+                    return;
+                }
+                
+                events.forEach(event => {
+                    const tr = document.createElement('tr');
+                    
+                    const idTd = document.createElement('td');
+                    idTd.textContent = event.event_id;
+                    tr.appendChild(idTd);
+                    
+                    const statusTd = document.createElement('td');
+                    const statusSpan = document.createElement('span');
+                    statusSpan.textContent = event.status;
+                    
+                    // Add styling class based on status
+                    let statusClass = 'status';
+                    if (event.status === 'pending') statusClass += ' status-pending';
+                    else if (event.status === 'processing') statusClass += ' status-processing';
+                    else if (event.status === 'succeeded') statusClass += ' status-succeeded';
+                    else if (event.status === 'failed/retrying') statusClass += ' status-failed-retrying';
+                    else if (event.status === 'dead-lettered') statusClass += ' status-dead-lettered';
+                    
+                    statusSpan.className = statusClass;
+                    statusTd.appendChild(statusSpan);
+                    tr.appendChild(statusTd);
+                    
+                    const attemptsTd = document.createElement('td');
+                    attemptsTd.textContent = event.attempts;
+                    tr.appendChild(attemptsTd);
+                    
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Error fetching events:', error);
+                document.getElementById('events-table-body').innerHTML = 
+                    '<tr><td colspan="3" style="text-align: center; color: red;">Failed to load events.</td></tr>';
+            }
+        }
+        
+        // Fetch on load
+        fetchEvents();
+    </script>
+</body>
+</html>

@@ -70,7 +70,7 @@ async def test_stub_processing_success_and_failure(redis):
     await handle_event(redis, json.dumps(event_fail))
     
     record2 = await redis.hgetall(f"{EVENT_STORE_PREFIX}{event_id_fail}")
-    assert record2.get("status") == "retrying"
+    assert record2.get("status") == "failed/retrying"
 
 @pytest.mark.asyncio
 async def test_exponential_backoff_delay_sequence(redis):
@@ -160,3 +160,41 @@ async def test_backoff_does_not_stall_queue(redis):
     # The success event should be done
     record = await redis.hgetall(f"{EVENT_STORE_PREFIX}{event_id_success}")
     assert record.get("status") == "succeeded"
+
+@pytest.mark.asyncio
+async def test_event_transitions(redis):
+    # 6.1: verify a test asserts the record reflects each transition
+    event_id = gen_event_id()
+    event = make_event(event_id, payload={"fail": False})
+    
+    # Ingest state simulation (pending, 0 attempts)
+    await redis.hset(
+        f"{EVENT_STORE_PREFIX}{event_id}",
+        mapping={"status": "pending", "attempts": "0", "provider": "test"}
+    )
+    record = await redis.hgetall(f"{EVENT_STORE_PREFIX}{event_id}")
+    assert record.get("status") == "pending"
+    assert record.get("attempts") == "0"
+    
+    # We mock process_event_stub to check if the status is "processing" and attempts is "1"
+    # while processing is active.
+    import worker.worker_loop
+    original_process = worker.worker_loop.process_event_stub
+    
+    async def mock_process(evt, r):
+        # Assert during processing transition
+        rec = await r.hgetall(f"{EVENT_STORE_PREFIX}{event_id}")
+        assert rec.get("status") == "processing"
+        assert rec.get("attempts") == "1"
+        
+    worker.worker_loop.process_event_stub = mock_process
+    
+    try:
+        await handle_event(redis, json.dumps(event))
+    finally:
+        worker.worker_loop.process_event_stub = original_process
+        
+    # Check final state (succeeded, 1 attempt)
+    final_record = await redis.hgetall(f"{EVENT_STORE_PREFIX}{event_id}")
+    assert final_record.get("status") == "succeeded"
+    assert final_record.get("attempts") == "1"

@@ -53,20 +53,31 @@ async def handle_event(redis: Redis, event_str: str):
         return
 
     try:
+        # Task 6.1: increment attempts and set status to processing
+        current_attempt = event.get("attempt", 0) + 1
+        event["attempt"] = current_attempt
+        
+        await redis.hset(
+            f"{EVENT_STORE_PREFIX}{event_id}",
+            mapping={"status": "processing", "attempts": str(current_attempt)}
+        )
+        
         # Execute processing logic
         await process_event_stub(event, redis)
         # Mark done
         await mark_event_done(redis, event_id)
         
+        await redis.hset(
+            f"{EVENT_STORE_PREFIX}{event_id}",
+            mapping={"status": "succeeded", "attempts": str(current_attempt)}
+        )
+        
     except Exception as e:
         # Task 4.4: Release claim on failure
         await release_claim(redis, event_id)
         
-        # Increment attempt
-        event["attempt"] += 1
-        attempt = event["attempt"]
-        
         # Task 4.3: Max attempts enforcement
+        attempt = event["attempt"]
         if attempt >= MAX_ATTEMPTS:
             await redis.rpush(DLQ_KEY, json.dumps(event))
             await redis.hset(
@@ -80,7 +91,7 @@ async def handle_event(redis: Redis, event_str: str):
             await redis.zadd(DELAYED_QUEUE_KEY, {json.dumps(event): ready_at})
             await redis.hset(
                 f"{EVENT_STORE_PREFIX}{event_id}",
-                mapping={"status": "retrying", "attempts": str(attempt)}
+                mapping={"status": "failed/retrying", "attempts": str(attempt)}
             )
 
 async def check_delayed_queue(redis: Redis):

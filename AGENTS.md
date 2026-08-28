@@ -39,3 +39,14 @@ isso está em `openspec/`.
 15. Não deixe comentário narrando o que você fez ("aqui eu corrijo o
     bug"). Comentário explica o código, não a sessão.
 16. Se algo foi criado e não é mais usado, apague no mesmo commit.
+
+## Documentação
+
+17. Escreva no idioma do documento que está editando, não no idioma do
+    prompt.
+18. Todo README abre explicando o problema que o projeto resolve, em
+    uma frase, e traz os comandos para instalar, rodar e testar. Só
+    depois vêm decisões e configuração.
+
+
+

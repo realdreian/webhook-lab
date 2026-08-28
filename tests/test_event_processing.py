@@ -74,29 +74,27 @@ async def test_stub_processing_success_and_failure(redis):
 
 @pytest.mark.asyncio
 async def test_exponential_backoff_delay_sequence(redis):
-    # 4.2: Backoff schedule sequence
+    # 4.2: First failure is retried after the configured base delay, not double it.
     event_id = gen_event_id()
-    
+
     # Attempt 0 -> failure -> attempt 1
     event = make_event(event_id, payload={"fail": True})
+    before = time.time()
     await handle_event(redis, json.dumps(event))
-    
+
     items = await redis.zrange(DELAYED_QUEUE_KEY, 0, -1, withscores=True)
-    
+
     # Find our event
     target = None
     for item, score in items:
         if json.loads(item)["event_id"] == event_id:
             target = score
             break
-            
+
     assert target is not None
-    # Calculate expected delay
-    expected_delay = min(BASE_DELAY * (2 ** 1), MAX_DELAY)
-    # The score should be roughly time.time() + expected_delay
-    # We just ensure it's in the future and matches the formula logically.
-    assert target > time.time()
-    
+    delay = target - before
+    assert delay == pytest.approx(BASE_DELAY, abs=0.5)
+
     # Let's clean up
     await redis.zremrangebyscore(DELAYED_QUEUE_KEY, "-inf", "+inf")
 
@@ -120,16 +118,17 @@ async def test_exponential_backoff_delay_increases_across_attempts(redis):
         await redis.zrem(DELAYED_QUEUE_KEY, member)
         return score - before, json.loads(member)
 
-    # First failure: attempt 0 -> 1
+    # First failure: attempt 0 -> 1. Per spec, the first retry uses the base delay as-is.
     delay1, next_event = await fail_and_get_delay(
         make_event(event_id, attempt=0, payload={"fail": True})
     )
-    expected1 = min(BASE_DELAY * (2 ** 1), MAX_DELAY)
+    expected1 = min(BASE_DELAY * 1, MAX_DELAY)
     assert delay1 == pytest.approx(expected1, abs=0.5)
 
-    # Second failure: attempt 1 -> 2, replaying the exact event the worker re-enqueued
+    # Second failure: attempt 1 -> 2, replaying the exact event the worker re-enqueued.
+    # Each subsequent retry doubles the previous delay.
     delay2, _ = await fail_and_get_delay(next_event)
-    expected2 = min(BASE_DELAY * (2 ** 2), MAX_DELAY)
+    expected2 = min(BASE_DELAY * 2, MAX_DELAY)
     assert delay2 == pytest.approx(expected2, abs=0.5)
 
     assert delay2 > delay1

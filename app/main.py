@@ -67,11 +67,15 @@ async def receive_webhook(provider: str, request: Request) -> Response:
         "enqueued_at": time.time(),
     }
     
-    # Store initial event record and push to queue
-    await redis.hset(
-        f"{EVENT_STORE_PREFIX}{event_id}",
-        mapping={"status": "pending", "attempts": "0", "provider": provider}
-    )
+    # Store initial event record and push to queue, unless the event was
+    # already processed successfully (duplicate delivery must not regress
+    # its status back to pending).
+    existing_status = await redis.hget(f"{EVENT_STORE_PREFIX}{event_id}", "status")
+    if existing_status != "succeeded":
+        await redis.hset(
+            f"{EVENT_STORE_PREFIX}{event_id}",
+            mapping={"status": "pending", "attempts": "0", "provider": provider}
+        )
     await redis.rpush(QUEUE_KEY, json.dumps(message))
 
     return JSONResponse(

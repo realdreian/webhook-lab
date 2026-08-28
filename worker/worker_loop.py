@@ -86,7 +86,7 @@ async def handle_event(redis: Redis, event_str: str):
             )
         else:
             # Task 4.2: Exponential backoff
-            delay = min(BASE_DELAY * (2 ** attempt), MAX_DELAY)
+            delay = min(BASE_DELAY * (2 ** (attempt - 1)), MAX_DELAY)
             ready_at = time.time() + delay
             await redis.zadd(DELAYED_QUEUE_KEY, {json.dumps(event): ready_at})
             await redis.hset(

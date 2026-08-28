@@ -30,9 +30,9 @@
 
 ## 5. End-to-end verification
 
-- [ ] 5.1 Write an end-to-end test: send the same event ID twice concurrently, and verify processing logic executes exactly once
-- [ ] 5.2 Write an end-to-end test: simulate a processing failure followed by a successful retry, and verify the event is marked done exactly once and not reprocessed after success
-- [ ] 5.3 Document configuration values (claim TTL, done-record TTL, base/max backoff delay, max attempts) and Redis persistence requirement (AOF) in a README or equivalent, per design.md Risks
+- [x] 5.1 Write an end-to-end test: send the same event ID twice concurrently, and verify processing logic executes exactly once
+- [x] 5.2 Write an end-to-end test: simulate a processing failure followed by a successful retry, and verify the event is marked done exactly once and not reprocessed after success
+- [x] 5.3 Document configuration values (claim TTL, done-record TTL, base/max backoff delay, max attempts) and Redis persistence requirement (AOF) in a README or equivalent, per design.md Risks
 
 ## 6. Front-end: event visibility (specs/event-visibility)
 

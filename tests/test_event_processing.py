@@ -5,7 +5,7 @@ import pytest
 import pytest_asyncio
 
 from app.redis import get_redis
-from worker.worker_loop import handle_event, check_delayed_queue, worker_loop
+from worker.worker_loop import handle_event, worker_loop
 from app.config import (
     QUEUE_KEY,
     DELAYED_QUEUE_KEY,
@@ -39,7 +39,7 @@ def make_event(event_id, attempt=0, payload=None):
 
 @pytest.mark.asyncio
 async def test_worker_claim_execution(redis):
-    # 4.1: only executes if claim succeeds
+    # Verify processing logic only executes if claim succeeds
     event_id = gen_event_id()
     event = make_event(event_id)
     
@@ -55,7 +55,7 @@ async def test_worker_claim_execution(redis):
 
 @pytest.mark.asyncio
 async def test_stub_processing_success_and_failure(redis):
-    # 4.6: Stub logic succeeds/records or fails/retryable
+    # Verify stub processing succeeds and records or fails deliberately
     event_id_success = gen_event_id()
     event_success = make_event(event_id_success, payload={"data": "ok"})
     
@@ -74,7 +74,7 @@ async def test_stub_processing_success_and_failure(redis):
 
 @pytest.mark.asyncio
 async def test_exponential_backoff_delay_sequence(redis):
-    # 4.2: First failure is retried after the configured base delay, not double it.
+    # Verify first failure is retried after the configured base delay, not double it.
     event_id = gen_event_id()
 
     # Attempt 0 -> failure -> attempt 1
@@ -100,7 +100,7 @@ async def test_exponential_backoff_delay_sequence(redis):
 
 @pytest.mark.asyncio
 async def test_exponential_backoff_delay_increases_across_attempts(redis):
-    # 4.2: "Repeated failures increase the delay" - the delay for attempt n+1
+    # Verify repeated failures increase the delay - the delay for attempt n+1
     # must be strictly larger than the delay for attempt n, matching base_delay * 2^attempt.
     event_id = gen_event_id()
 
@@ -135,7 +135,7 @@ async def test_exponential_backoff_delay_increases_across_attempts(redis):
 
 @pytest.mark.asyncio
 async def test_exponential_backoff_delay_capped_at_max_delay(redis, monkeypatch):
-    # 4.2: once base_delay * 2^attempt exceeds max_delay, the scheduled delay must be
+    # Verify once base_delay * 2^attempt exceeds max_delay, the scheduled delay must be
     # clamped to max_delay rather than growing unbounded.
     import worker.worker_loop as worker_loop_module
     monkeypatch.setattr(worker_loop_module, "BASE_DELAY", 1)
@@ -167,7 +167,7 @@ async def test_exponential_backoff_delay_capped_at_max_delay(redis, monkeypatch)
 
 @pytest.mark.asyncio
 async def test_max_attempts_dead_letter(redis):
-    # 4.3: Max attempts exhausted stops retries, goes to DLQ
+    # Verify max attempts exhausted stops retries and moves the event to DLQ
     event_id = gen_event_id()
     # If attempt is MAX_ATTEMPTS - 1, the next failure makes it MAX_ATTEMPTS
     event = make_event(event_id, attempt=MAX_ATTEMPTS - 1, payload={"fail": True})
@@ -188,7 +188,7 @@ async def test_max_attempts_dead_letter(redis):
 
 @pytest.mark.asyncio
 async def test_release_claim_on_failure_can_reclaim(redis):
-    # 4.4: On processing failure, release the idempotency claim, confirm reclaim
+    # Verify that on processing failure, the claim is released and can be reclaimed
     event_id = gen_event_id()
     event = make_event(event_id, payload={"fail": True})
     
@@ -203,7 +203,7 @@ async def test_release_claim_on_failure_can_reclaim(redis):
 
 @pytest.mark.asyncio
 async def test_backoff_does_not_stall_queue(redis):
-    # 4.5: Backlogged retry doesn't stall the queue
+    # Verify that one event's backoff wait does not block other queued events
     event_id_fail = gen_event_id()
     event_fail = make_event(event_id_fail, payload={"fail": True})
     
@@ -228,7 +228,7 @@ async def test_backoff_does_not_stall_queue(redis):
 
 @pytest.mark.asyncio
 async def test_event_transitions(redis):
-    # 6.1: verify a test asserts the record reflects each transition
+    # Verify that the event record reflects each status transition
     event_id = gen_event_id()
     event = make_event(event_id, payload={"fail": False})
     

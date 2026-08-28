@@ -5,7 +5,6 @@ from httpx import AsyncClient, ASGITransport
 
 from app.main import app
 from app.redis import get_redis
-from app.config import QUEUE_KEY, EVENT_STORE_PREFIX
 from worker.worker_loop import worker_loop
 
 @pytest_asyncio.fixture
@@ -18,7 +17,7 @@ def gen_event_id():
 
 @pytest.mark.asyncio
 async def test_e2e_visibility_retry_flow(redis):
-    # 6.4: Send webhook event with "fail": true, run worker, confirm GET /events status
+    # Send webhook event with "fail": true, run worker, confirm GET /events status
     event_id = gen_event_id()
     
     transport = ASGITransport(app=app)

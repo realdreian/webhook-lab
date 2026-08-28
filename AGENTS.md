@@ -36,8 +36,7 @@ isso está em `openspec/`.
 
 14. Não deixe código morto, import não usado, arquivo vazio criado "por
     precaução" ou print de debug.
-15. Não deixe comentário narrando o que você fez ("aqui eu corrijo o
-    bug"). Comentário explica o código, não a sessão.
+15. Comentário explica o código, não o processo. Nada de narrar a sessão ("aqui eu corrijo o bug") nem referenciar números de task, specs ou planos — essas referências ficam órfãs quando a change é arquivada. Se o teste cobre um cenário, cite o cenário pelo nome, não pelo número.
 16. Se algo foi criado e não é mais usado, apague no mesmo commit.
 
 ## Documentação

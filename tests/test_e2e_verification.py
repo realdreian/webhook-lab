@@ -23,7 +23,7 @@ def gen_event_id():
 
 @pytest.mark.asyncio
 async def test_concurrent_duplicate_ingestion_processed_once(redis):
-    # 5.1 Send the same event ID twice concurrently, and verify processing logic executes exactly once
+    # Send the same event ID twice concurrently, and verify processing logic executes exactly once
     event_id = gen_event_id()
     
     # We will wrap process_event_stub to count executions
@@ -62,7 +62,7 @@ async def test_concurrent_duplicate_ingestion_processed_once(redis):
 
 @pytest.mark.asyncio
 async def test_failure_retry_success_flow(redis):
-    # 5.2 Simulate a processing failure followed by a successful retry, and verify the event is marked done exactly once and not reprocessed after success
+    # Simulate a processing failure followed by a successful retry, and verify the event is marked done exactly once and not reprocessed after success
     event_id = gen_event_id()
     
     execution_calls = []

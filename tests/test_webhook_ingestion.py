@@ -50,14 +50,56 @@ async def test_malformed_json_body_returns_400():
 
 @pytest.mark.asyncio
 async def test_missing_event_id_returns_400():
+    from app.redis import get_redis
+    from app.config import QUEUE_KEY
+    redis = await get_redis()
+    
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
+        queue_len_before = await redis.llen(QUEUE_KEY)
         response = await client.post(
             "/webhooks/generic",
             json={"data": "no-id-here"}
         )
         assert response.status_code == 400
         assert "No recognizable event ID" in response.json()["detail"]
+        queue_len_after = await redis.llen(QUEUE_KEY)
+        assert queue_len_before == queue_len_after
+
+@pytest.mark.asyncio
+async def test_blank_event_id_is_not_usable_and_returns_400():
+    # An event ID field that is present but empty/whitespace-only is not a
+    # "usable event ID" per spec, so it must be treated as if no ID was
+    # supplied at all (400, nothing enqueued) -- not accepted as a literal
+    # blank identifier.
+    from app.redis import get_redis
+    from app.config import QUEUE_KEY
+    redis = await get_redis()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Blank event_id in the payload
+        queue_len_before = await redis.llen(QUEUE_KEY)
+        response = await client.post(
+            "/webhooks/generic",
+            json={"event_id": "   ", "type": "noop"}
+        )
+        assert response.status_code == 400
+        assert "No recognizable event ID" in response.json()["detail"]
+        queue_len_after = await redis.llen(QUEUE_KEY)
+        assert queue_len_before == queue_len_after
+
+        # Blank event ID in the header, with no usable payload field
+        queue_len_before = await redis.llen(QUEUE_KEY)
+        response = await client.post(
+            "/webhooks/generic",
+            headers={"X-Event-Id": "   "},
+            json={"type": "noop"}
+        )
+        assert response.status_code == 400
+        assert "No recognizable event ID" in response.json()["detail"]
+        queue_len_after = await redis.llen(QUEUE_KEY)
+        assert queue_len_before == queue_len_after
 
 @pytest.mark.asyncio
 async def test_blank_event_id_is_not_usable_and_returns_400():

@@ -60,6 +60,31 @@ async def test_missing_event_id_returns_400():
         assert "No recognizable event ID" in response.json()["detail"]
 
 @pytest.mark.asyncio
+async def test_blank_event_id_is_not_usable_and_returns_400():
+    # An event ID field that is present but empty/whitespace-only is not a
+    # "usable event ID" per spec, so it must be treated as if no ID was
+    # supplied at all (400, nothing enqueued) -- not accepted as a literal
+    # blank identifier.
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Blank event_id in the payload
+        response = await client.post(
+            "/webhooks/generic",
+            json={"event_id": "   ", "type": "noop"}
+        )
+        assert response.status_code == 400
+        assert "No recognizable event ID" in response.json()["detail"]
+
+        # Blank event ID in the header, with no usable payload field
+        response = await client.post(
+            "/webhooks/generic",
+            headers={"X-Event-Id": "   "},
+            json={"type": "noop"}
+        )
+        assert response.status_code == 400
+        assert "No recognizable event ID" in response.json()["detail"]
+
+@pytest.mark.asyncio
 async def test_valid_event_id_in_payload_returns_2xx():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

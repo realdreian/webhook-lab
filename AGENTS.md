@@ -47,5 +47,15 @@ isso está em `openspec/`.
     uma frase, e traz os comandos para instalar, rodar e testar. Só
     depois vêm decisões e configuração.
 
+## Git
+
+19. Nunca trabalhe na main. Antes de começar qualquer task, crie uma
+    branch com nome derivado da spec ou da task
+    (ex: task/3-2-claim-ttl).
+20. Todo commit termina com a linha `Agent: <nome>` (ex: Agent:
+    agy-flash).
+21. Nunca faça push, merge, rebase ou force. Commit local e pare.
+    Integração é decisão humana.
+
 
 
